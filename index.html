@@ -420,7 +420,10 @@ async function viewGuest(slug) {
               ${!it.reserved ? `<button class="btn btn-primary btn-sm" data-res="${esc(it.id)}" type="button">Ik koop dit</button>` : it.mine ? `<button class="btn btn-ghost btn-sm" data-unres="${esc(it.id)}" type="button">Toch niet</button>` : ""}
             </div>
           </article>`;
-    $app.innerHTML = headHTML(l, total ? `<span class="tag">${taken} van ${total} cadeaus afgestreept</span>` : "") + `
+    const nContrib = l.items.length - total;
+    const tags = (total ? `<span class="tag">${taken} van ${total} ${total === 1 ? "cadeau" : "cadeaus"} afgestreept</span>` : "")
+      + (nContrib ? `<span class="tag">+ ${nContrib} ${nContrib === 1 ? "geldbijdrage" : "geldbijdragen"}</span>` : "");
+    $app.innerHTML = headHTML(l, tags) + `
       ${total ? `<div class="progress" aria-hidden="true"><i style="width:${Math.round(taken / total * 100)}%"></i></div>` : ""}
       <div class="toolbar">
         <label class="switch"><input type="checkbox" id="hideT" ${hideTaken ? "checked" : ""}> Verberg afgestreepte</label>
