@@ -201,7 +201,9 @@ const configured = () => !!(CFG.supabaseUrl && CFG.supabaseAnonKey);
 async function rpc(fn, args = {}) {
   const res = await fetch(CFG.supabaseUrl.replace(/\/$/, "") + "/rest/v1/rpc/" + fn, {
     method: "POST",
-    headers: { "Content-Type": "application/json", apikey: CFG.supabaseAnonKey, Authorization: "Bearer " + CFG.supabaseAnonKey },
+    // Oude anon keys (JWT, "eyJ…") mogen ook als Bearer mee; nieuwe publishable keys ("sb_publishable_…") alleen als apikey.
+    headers: Object.assign({ "Content-Type": "application/json", apikey: CFG.supabaseAnonKey },
+      CFG.supabaseAnonKey.startsWith("eyJ") ? { Authorization: "Bearer " + CFG.supabaseAnonKey } : {}),
     body: JSON.stringify(args)
   });
   const txt = await res.text();
