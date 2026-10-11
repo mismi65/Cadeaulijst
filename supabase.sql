@@ -87,7 +87,7 @@ alter table public.contributions enable row level security;
 
 -- ---------- Hulpfuncties (intern) ----------
 create or replace function public._new_slug() returns text
-language plpgsql as $$
+language plpgsql set search_path = public as $$
 declare
   alphabet constant text := 'abcdefghjkmnpqrstuvwxyz23456789'; -- geen verwarrende tekens
   s text;
@@ -108,7 +108,7 @@ language sql stable security definer set search_path = public as $$
 $$;
 
 create or replace function public._clean_url(p_url text) returns text
-language sql immutable as $$
+language sql immutable set search_path = public as $$
   select case
     when p_url is null or btrim(p_url) = '' then null
     when btrim(p_url) ~* '^https?://' then btrim(p_url)
