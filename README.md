@@ -16,6 +16,11 @@ Iedereen kan een verlanglijst maken, de link delen, en gevers strepen af wat ze 
 - Een gever kan alleen zijn eigen afstreping ongedaan maken (gekoppeld aan zijn browser).
 - Opent de jarige zelf de deellink, dan verschijnt een spoilerscherm.
 - De lijst ververst elke 15 seconden.
+
+### Twee soorten wensen
+- **Cadeau**: één gever streept het af ("Ik koop dit").
+- **Geldbijdrage**: bijvoorbeeld een donatie aan een goed doel of een bijdrage aan een wellnessweekend. Meerdere gevers zeggen elk een bedrag toe; iedereen ziet het opgehaalde totaal (en de voortgang als er een doelbedrag is) en wie meedoet, maar niet wie hoeveel geeft. De jarige ziet niets.
+- De app regelt **geen betalingen**. Bij een geldbijdrage zet de jarige een betaal-/donatielink (Tikkie, actiepagina) en/of IBAN in de uitleg; gevers betalen zelf.
 - Alle database-toegang loopt via functies; de tabellen zelf zijn dicht (RLS), dus de anon key en beheertokens zijn veilig.
 
 ## Installeren (± 10 minuten)
@@ -57,4 +62,4 @@ Een eigen domein koppel je onder **Custom domains**. Een PWA vereist HTTPS; dat 
 - `vercel.json` (Vercel) / `_headers` (Cloudflare) – zorgen dat updates van `sw.js` en `config.js` direct doorkomen
 
 ## Updaten
-Wijzig `index.html` en upload opnieuw. Verander bij grote wijzigingen `CACHE = "cadeaulijst-v1"` in `sw.js` naar `v2`, zodat telefoons de nieuwe versie direct oppakken.
+Wijzig `index.html` en push/upload opnieuw. Is `supabase.sql` veranderd? Draai hem dan opnieuw in de SQL Editor: het script is herhaalbaar en laat bestaande lijsten staan. Verander bij grote wijzigingen `CACHE = "cadeaulijst-v1"` in `sw.js` naar `v2`, zodat telefoons de nieuwe versie direct oppakken.

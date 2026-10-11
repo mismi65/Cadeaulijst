@@ -111,6 +111,27 @@ input:focus,textarea:focus,select:focus{outline:2px solid var(--accent);outline-
 .status.gray{color:var(--muted)}
 .actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end}
 @media (max-width:420px){.item{grid-template-columns:1fr}.actions{flex-direction:row;justify-content:flex-start}}
+/* Geldbijdragen */
+.kind{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--green-soft);color:var(--green);margin-bottom:6px}
+.kind svg{width:13px;height:13px}
+.item.contrib{border-color:var(--green)}
+.raise{margin-top:10px}
+.raise .bar{height:8px;background:var(--surface-2);border-radius:99px;overflow:hidden}
+.raise .bar i{display:block;height:100%;background:var(--green);border-radius:99px;transition:width .4s}
+.raise .nums{display:flex;justify-content:space-between;gap:8px;font-size:14px;margin-top:6px}
+.raise .nums b{color:var(--green)}
+.givers{font-size:13px;color:var(--muted);margin-top:6px}
+.paybox{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px dashed var(--green);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 14px}
+.chips button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;cursor:pointer;font-weight:600;font-size:14px}
+.chips button:hover{background:var(--surface-2)}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--surface-2);padding:4px;border-radius:14px;margin-bottom:16px}
+.seg label{margin:0;text-align:center;padding:10px 8px;border-radius:10px;cursor:pointer;font-size:14px;line-height:1.25}
+.seg label small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg input:checked + span{display:block}
+.seg label:has(input:checked){background:var(--surface);box-shadow:var(--shadow)}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent)}
 .empty{text-align:center;padding:36px 20px;color:var(--muted)}
 .empty svg{width:56px;height:56px;opacity:.6;margin-bottom:8px}
 
@@ -220,7 +241,9 @@ const api = {
   upsertItem: a => rpc("upsert_item", a),
   deleteItem: (slug, token, id) => rpc("delete_item", { p_slug: slug, p_token: token, p_item_id: id }),
   reserve: (id, name) => rpc("reserve_item", { p_item_id: id, p_reserver_token: reserverToken(), p_reserver_name: name || null }),
-  unreserve: id => rpc("unreserve_item", { p_item_id: id, p_reserver_token: reserverToken() })
+  unreserve: id => rpc("unreserve_item", { p_item_id: id, p_reserver_token: reserverToken() }),
+  pledge: (id, amount, name) => rpc("pledge_contribution", { p_item_id: id, p_reserver_token: reserverToken(), p_amount: amount, p_contributor_name: name || null }),
+  withdraw: id => rpc("withdraw_contribution", { p_item_id: id, p_reserver_token: reserverToken() })
 };
 
 /* ============ Routing ============ */
@@ -244,6 +267,7 @@ const ICON = {
   check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
   edit: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
   info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
+  heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></svg>',
   eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10 10 0 0 1 12 20c-7 0-10-8-10-8a18 18 0 0 1 5.1-5.9M9.9 4.2A9 9 0 0 1 12 4c7 0 10 8 10 8a18 18 0 0 1-2.2 3.2M1 1l22 22"/></svg>'
 };
 const prioLabel = p => p === 2 ? "★★ Grootste wens" : p === 1 ? "★ Heel graag" : "";
@@ -268,7 +292,7 @@ function viewHome() {
   $app.innerHTML = `
     <section class="hero">
       <h1>Wensen delen,<br>dubbele cadeaus voorkomen.</h1>
-      <p>Maak je verlanglijst, stuur de link rond, en iedereen streept af wat hij of zij gaat kopen. Jij ziet niet wat er is gekozen, dus de verrassing blijft.</p>
+      <p>Maak je verlanglijst met cadeaus of een geldbijdrage (bijv. voor een goed doel of een weekendje weg), stuur de link rond, en iedereen streept af wat hij of zij geeft. Jij ziet niet wat er is gekozen, dus de verrassing blijft.</p>
       <div class="steps">
         <div><b>1</b>Maak je lijst met wensen</div>
         <div><b>2</b>Deel de link via app of mail</div>
@@ -324,13 +348,32 @@ function headHTML(l, extra = "") {
   </section>`;
 }
 
+const isContrib = it => it.kind === "contribution";
 function itemBody(it) {
-  const url = safeUrl(it.url);
+  const url = safeUrl(it.url), c = isContrib(it);
+  const amount = c ? (it.target_amount != null ? `<span class="price">Doel ${euro(it.target_amount)}</span>` : "")
+                   : (it.price != null ? `<span class="price">${euro(it.price)}</span>` : "");
+  const link = url ? `<a class="shop" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${c ? "Betaal/doneer via" : "Bekijk bij"} ${esc(host(url))} ↗</a>` : "";
   return `<div style="min-width:0">
+    ${c ? `<div class="kind">${ICON.heart} Geldbijdrage</div>` : ""}
     ${it.priority ? `<div class="prio">${prioLabel(it.priority)}</div>` : ""}
     <h3>${esc(it.title)}</h3>
     ${it.note ? `<div class="note">${esc(it.note)}</div>` : ""}
-    ${(it.price != null || url) ? `<div class="sub">${it.price != null ? `<span class="price">${euro(it.price)}</span>` : ""}${url ? `<a class="shop" href="${esc(url)}" target="_blank" rel="noopener noreferrer">Bekijk bij ${esc(host(url))} ↗</a>` : ""}</div>` : ""}`;
+    ${(amount || link) ? `<div class="sub">${amount}${link}</div>` : ""}`;
+}
+/* Voortgang van een geldbijdrage (alleen voor gevers) */
+function raiseHTML(it) {
+  const raised = Number(it.raised || 0), n = (it.contributions || []).length, t = it.target_amount != null ? Number(it.target_amount) : null;
+  const pct = t ? Math.min(100, Math.round(raised / t * 100)) : null;
+  const others = (it.contributions || []).filter(c => !c.mine).map(c => c.name ? esc(c.name) : "iemand");
+  const me = (it.contributions || []).some(c => c.mine);
+  const all = me ? [...others, "jij"] : others;
+  const names = all.length > 1 ? all.slice(0, -1).join(", ") + " en " + all[all.length - 1] : all[0] || "";
+  return `<div class="raise">
+    ${t ? `<div class="bar" aria-hidden="true"><i style="width:${pct}%"></i></div>` : ""}
+    <div class="nums"><span><b>${euro(raised)}</b> toegezegd${t ? ` van ${euro(t)}` : ""}</span><span class="muted">${n} ${n === 1 ? "gever" : "gevers"}${t && raised >= t ? " · doel bereikt! 🎉" : ""}</span></div>
+    ${n ? `<div class="givers">Gevers: ${names}</div>` : ""}
+  </div>`;
 }
 
 /* ---------- Gever ---------- */
@@ -348,23 +391,27 @@ async function viewGuest(slug) {
     } catch (e) { if (!silent) $app.innerHTML = `<div class="empty">${esc(e.message)}<br><br><button class="btn btn-ghost" onclick="location.reload()">Opnieuw</button></div>`; }
   }
   function render() {
-    const l = list, total = l.items.length, taken = l.items.filter(i => i.reserved).length;
+    const l = list, gifts = l.items.filter(i => !isContrib(i)), total = gifts.length, taken = gifts.filter(i => i.reserved).length;
     if (!spoil) {
       $app.innerHTML = headHTML(l) + `
         <div class="notice warn">${ICON.eye}<div><strong>Dit is je eigen lijst.</strong> Om de verrassing niet te bederven laten we niet zien wat er al is afgestreept.<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><a class="btn btn-primary btn-sm" href="#/b/${esc(slug)}/${esc(ownedToken(slug))}">Naar beheren</a><button class="btn btn-ghost btn-sm" id="spoilBtn" type="button">Toch tonen</button></div></div></div>`;
       document.getElementById("spoilBtn").onclick = () => { if (confirm("Weet je het zeker? Dan zie je wat je krijgt.")) { spoil = true; sessionStorage.setItem("cl_spoil_" + slug, "1"); render(); } };
       return;
     }
-    const shown = hideTaken ? l.items.filter(i => !i.reserved || i.mine) : l.items;
-    $app.innerHTML = headHTML(l, `<span class="tag">${taken} van ${total} afgestreept</span>`) + `
-      ${total ? `<div class="progress" aria-hidden="true"><i style="width:${total ? Math.round(taken / total * 100) : 0}%"></i></div>` : ""}
-      <div class="toolbar">
-        <label class="switch"><input type="checkbox" id="hideT" ${hideTaken ? "checked" : ""}> Verberg afgestreepte</label>
-        <span class="spacer"></span>
-        <button class="btn btn-ghost btn-sm" id="nameBtn" type="button">${store.get("name", "") ? "Jij bent: " + esc(store.get("name", "")) : "Stel je naam in"}</button>
-      </div>
-      <div class="items">
-        ${shown.length ? shown.map(it => `
+    const shown = hideTaken ? l.items.filter(i => isContrib(i) || !i.reserved || i.mine) : l.items;
+    const card = it => isContrib(it) ? `
+          <article class="card item contrib ${it.my_amount != null ? "mine" : ""}">
+            ${itemBody(it)}
+            ${raiseHTML(it)}
+            ${it.my_amount != null ? `<div class="status green">${ICON.check} Jij draagt ${euro(it.my_amount)} bij</div>
+              <div class="paybox">Vergeet niet te betalen ${safeUrl(it.url) ? `via <a class="shop" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">${esc(host(safeUrl(it.url)))} ↗</a>` : it.note ? "(zie de uitleg hierboven)" : "(vraag even aan wie)"}</div>` : ""}
+            </div>
+            <div class="actions">
+              ${it.my_amount != null
+                ? `<button class="btn btn-ghost btn-sm" data-pledge="${esc(it.id)}" type="button">Wijzig bedrag</button><button class="btn btn-ghost btn-sm" data-withdraw="${esc(it.id)}" type="button">Intrekken</button>`
+                : `<button class="btn btn-green btn-sm" data-pledge="${esc(it.id)}" type="button">Ik draag bij</button>`}
+            </div>
+          </article>` : `
           <article class="card item ${it.reserved ? (it.mine ? "mine" : "taken") : ""}">
             ${itemBody(it)}
             ${it.reserved ? `<div class="status ${it.mine ? "green" : "gray"}">${ICON.check} ${it.mine ? "Jij koopt dit" : "Wordt al gekocht" + (it.reserver_name ? " door " + esc(it.reserver_name) : "")}</div>` : ""}
@@ -372,13 +419,54 @@ async function viewGuest(slug) {
             <div class="actions">
               ${!it.reserved ? `<button class="btn btn-primary btn-sm" data-res="${esc(it.id)}" type="button">Ik koop dit</button>` : it.mine ? `<button class="btn btn-ghost btn-sm" data-unres="${esc(it.id)}" type="button">Toch niet</button>` : ""}
             </div>
-          </article>`).join("") : `<div class="empty card">${ICON.gift}<p>${total ? "Alles is al afgestreept! 🎉" : "Er staan nog geen cadeaus op deze lijst."}</p></div>`}
+          </article>`;
+    $app.innerHTML = headHTML(l, total ? `<span class="tag">${taken} van ${total} cadeaus afgestreept</span>` : "") + `
+      ${total ? `<div class="progress" aria-hidden="true"><i style="width:${Math.round(taken / total * 100)}%"></i></div>` : ""}
+      <div class="toolbar">
+        <label class="switch"><input type="checkbox" id="hideT" ${hideTaken ? "checked" : ""}> Verberg afgestreepte</label>
+        <span class="spacer"></span>
+        <button class="btn btn-ghost btn-sm" id="nameBtn" type="button">${store.get("name", "") ? "Jij bent: " + esc(store.get("name", "")) : "Stel je naam in"}</button>
       </div>
-      <div class="notice">${ICON.info}<div>Je afstreping is gekoppeld aan deze browser. Alleen jij kunt hem hier weer ongedaan maken. ${esc(l.owner_name)} ziet niet wat er is gekozen.</div></div>`;
+      <div class="items">
+        ${shown.length ? shown.map(card).join("") : `<div class="empty card">${ICON.gift}<p>${l.items.length ? "Alles is al afgestreept! 🎉" : "Er staan nog geen wensen op deze lijst."}</p></div>`}
+      </div>
+      <div class="notice">${ICON.info}<div>Je keuzes zijn gekoppeld aan deze browser; alleen jij kunt ze hier wijzigen of intrekken. ${esc(l.owner_name)} ziet niet wat er is gekozen of toegezegd.${l.items.some(isContrib) ? " Bij een geldbijdrage zeg je een bedrag toe; betalen doe je zelf via de link of gegevens bij die wens." : ""}</div></div>`;
     document.getElementById("hideT").onchange = e => { hideTaken = e.target.checked; store.set("hideTaken", hideTaken); render(); };
     document.getElementById("nameBtn").onclick = () => askName().then(n => n !== null && render());
     $app.querySelectorAll("[data-res]").forEach(b => b.onclick = () => reserve(b.dataset.res, b));
     $app.querySelectorAll("[data-unres]").forEach(b => b.onclick = () => unreserve(b.dataset.unres, b));
+    $app.querySelectorAll("[data-pledge]").forEach(b => b.onclick = () => pledge(l.items.find(i => i.id === b.dataset.pledge)));
+    $app.querySelectorAll("[data-withdraw]").forEach(b => b.onclick = () => withdraw(b.dataset.withdraw, b));
+  }
+  function pledge(it) {
+    const chips = [10, 20, 25, 50, 100];
+    dlgForm.innerHTML = `<h2>${it.my_amount != null ? "Bijdrage wijzigen" : "Bijdragen aan"}</h2>
+      <p style="margin:-6px 0 14px;font-weight:600">${esc(it.title)}</p>
+      <div class="field"><label for="p_amount">Hoeveel draag je bij? (€)</label>
+        <input id="p_amount" type="number" min="1" max="100000" step="0.01" inputmode="decimal" required value="${it.my_amount ?? ""}" placeholder="bijv. 25"></div>
+      <div class="chips">${chips.map(c => `<button type="button" data-chip="${c}">€ ${c}</button>`).join("")}</div>
+      <div class="field"><label for="p_name">Je naam <span class="opt">(zien andere gevers; leeg = anoniem)</span></label>
+        <input id="p_name" type="text" maxlength="60" value="${esc(store.get("name", ""))}" placeholder="bijv. Johan"></div>
+      ${safeUrl(it.url) || it.note ? `<div class="paybox" style="margin:0 0 14px">Betalen doe je zelf, ${safeUrl(it.url) ? `via <a class="shop" href="${esc(safeUrl(it.url))}" target="_blank" rel="noopener noreferrer">${esc(host(safeUrl(it.url)))} ↗</a>` : "zie hieronder"}.${it.note ? `<div class="note" style="margin-top:6px">${esc(it.note)}</div>` : ""}</div>` : ""}
+      <div class="foot"><button class="btn btn-ghost" value="cancel" formnovalidate>Annuleren</button><button class="btn btn-green" value="ok">${it.my_amount != null ? "Opslaan" : "Toezeggen"}</button></div>`;
+    dlgForm.querySelectorAll("[data-chip]").forEach(b => b.onclick = () => { document.getElementById("p_amount").value = b.dataset.chip; });
+    dlg.returnValue = ""; dlg.showModal(); setTimeout(() => document.getElementById("p_amount").focus(), 50);
+    dlg.onclose = async () => {
+      if (dlg.returnValue !== "ok") return;
+      const amount = Number(document.getElementById("p_amount").value), name = document.getElementById("p_name").value.trim();
+      store.set("name", name);
+      try {
+        const ok = await api.pledge(it.id, amount, name);
+        toast(ok ? `Dank je! ${euro(amount)} toegezegd.` : "Deze wens is net aangepast, probeer het opnieuw.");
+      } catch (e) { toast(e.message); }
+      load(true);
+    };
+  }
+  async function withdraw(id, btn) {
+    if (!confirm("Je bijdrage intrekken?")) return;
+    btn.disabled = true;
+    try { const ok = await api.withdraw(id); toast(ok ? "Bijdrage ingetrokken." : "Dat lukte niet."); } catch (e) { toast(e.message); }
+    load(true);
   }
   async function reserve(id, btn) {
     let name = store.get("name", "");
@@ -441,21 +529,21 @@ async function viewOwner(slug, token) {
         </div>
       </section>
       ${isNew ? `<div class="notice warn">${ICON.info}<div><strong>Bewaar je beheerlink!</strong> Alleen met deze link kun je de lijst aanpassen. Hij staat ook onder ‘Mijn lijsten’ in deze browser. <button class="btn btn-ghost btn-sm" id="copyOwner" type="button" style="margin-top:8px">Kopieer beheerlink</button></div></div>` : ""}
-      <div class="section-title"><h2>Wensen (${l.items.length})</h2><button class="btn btn-primary btn-sm" id="addTop" type="button">+ Cadeau</button></div>
+      <div class="section-title"><h2>Wensen (${l.items.length})</h2><button class="btn btn-primary btn-sm" id="addTop" type="button">+ Wens</button></div>
       <div class="items">
         ${l.items.length ? l.items.map(it => `
-          <article class="card item">
+          <article class="card item ${isContrib(it) ? "contrib" : ""}">
             ${itemBody(it)}</div>
             <div class="actions">
               <button class="btn-icon btn" data-edit="${esc(it.id)}" type="button" aria-label="Bewerk ${esc(it.title)}">${ICON.edit}</button>
             </div>
-          </article>`).join("") : `<div class="empty card">${ICON.gift}<p>Nog geen wensen. Voeg je eerste cadeau toe!</p><button class="btn btn-primary" id="addEmpty" type="button">+ Cadeau toevoegen</button></div>`}
+          </article>`).join("") : `<div class="empty card">${ICON.gift}<p>Nog geen wensen. Voeg een cadeau of een geldbijdrage toe!</p><button class="btn btn-primary" id="addEmpty" type="button">+ Wens toevoegen</button></div>`}
       </div>
       <div style="margin-top:30px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" id="copyOwner2" type="button">Kopieer beheerlink</button>
         <button class="btn btn-ghost btn-sm" id="delList" type="button" style="color:var(--accent)">Lijst verwijderen</button>
       </div>
-      <button class="btn btn-primary fab" id="addFab" type="button" aria-label="Cadeau toevoegen">+ Cadeau</button>`;
+      <button class="btn btn-primary fab" id="addFab" type="button" aria-label="Wens toevoegen">+ Wens</button>`;
     const copy = (txt, msg) => (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast(msg)).catch(() => { prompt("Kopieer deze link:", txt); });
     document.getElementById("copyShare").onclick = () => copy(url, "Deellink gekopieerd");
     document.getElementById("shareInput").onclick = e => e.target.select();
@@ -470,13 +558,19 @@ async function viewOwner(slug, token) {
     };
   }
   function itemDialog(it) {
-    const e = it || {};
-    dlgForm.innerHTML = `<h2>${it ? "Cadeau bewerken" : "Cadeau toevoegen"}</h2>
-      <div class="field"><label for="i_title">Wat wil je?</label><input id="i_title" type="text" required maxlength="160" value="${esc(e.title)}" placeholder="bijv. Koptelefoon"></div>
-      <div class="field"><label for="i_note">Toelichting <span class="opt">(maat, kleur, merk…)</span></label><textarea id="i_note" maxlength="500" placeholder="Maat L, liefst in het blauw">${esc(e.note)}</textarea></div>
-      <div class="field"><label for="i_url">Link naar winkel <span class="opt">(optioneel)</span></label><input id="i_url" type="text" inputmode="url" maxlength="1000" value="${esc(e.url)}" placeholder="https://"></div>
+    const e = it || {}, startKind = e.kind || "gift";
+    dlgForm.innerHTML = `<h2>${it ? "Wens bewerken" : "Wens toevoegen"}</h2>
+      <div class="seg" role="radiogroup" aria-label="Soort wens">
+        <label><input type="radio" name="i_kind" value="gift" ${startKind === "gift" ? "checked" : ""}><span><strong>🎁 Cadeau</strong><small>Eén gever koopt het</small></span></label>
+        <label><input type="radio" name="i_kind" value="contribution" ${startKind === "contribution" ? "checked" : ""}><span><strong>💚 Geldbijdrage</strong><small>Goed doel, weekendje weg…</small></span></label>
+      </div>
+      ${it ? `<p class="small muted" id="kindWarn" style="margin:-8px 0 12px" hidden>Let op: bij wisselen van soort vervallen bestaande afstrepingen en toezeggingen.</p>` : ""}
+      <div class="field"><label for="i_title" id="l_title">Wat wil je?</label><input id="i_title" type="text" required maxlength="160" value="${esc(e.title)}"></div>
+      <div class="field"><label for="i_note" id="l_note"></label><textarea id="i_note" maxlength="500">${esc(e.note)}</textarea></div>
+      <div class="field"><label for="i_url" id="l_url"></label><input id="i_url" type="text" inputmode="url" maxlength="1000" value="${esc(e.url)}" placeholder="https://"></div>
       <div class="row">
-        <div class="field"><label for="i_price">Prijs (€) <span class="opt">(ca.)</span></label><input id="i_price" type="number" min="0" step="0.01" inputmode="decimal" value="${e.price ?? ""}"></div>
+        <div class="field" id="f_price"><label for="i_price">Prijs (€) <span class="opt">(ca.)</span></label><input id="i_price" type="number" min="0" step="0.01" inputmode="decimal" value="${e.price ?? ""}"></div>
+        <div class="field hidden" id="f_target"><label for="i_target">Doelbedrag (€) <span class="opt">(optioneel)</span></label><input id="i_target" type="number" min="1" step="0.01" inputmode="decimal" value="${e.target_amount ?? ""}" placeholder="bijv. 400"></div>
         <div class="field"><label for="i_prio">Hoe graag?</label><select id="i_prio">
           <option value="0" ${!e.priority ? "selected" : ""}>Leuk om te krijgen</option>
           <option value="1" ${e.priority === 1 ? "selected" : ""}>★ Heel graag</option>
@@ -487,24 +581,40 @@ async function viewOwner(slug, token) {
         <button class="btn btn-ghost" value="cancel" formnovalidate>Annuleren</button>
         <button class="btn btn-primary" value="ok">${it ? "Opslaan" : "Toevoegen"}</button>
       </div>`;
+    const kindNow = () => dlgForm.querySelector("input[name=i_kind]:checked").value;
+    const applyKind = () => {
+      const c = kindNow() === "contribution";
+      document.getElementById("l_title").textContent = c ? "Waarvoor?" : "Wat wil je?";
+      document.getElementById("i_title").placeholder = c ? "bijv. Bijdrage aan wellnessweekend" : "bijv. Koptelefoon";
+      document.getElementById("l_note").innerHTML = c ? 'Uitleg en betaalgegevens <span class="opt">(bijv. IBAN t.n.v.)</span>' : 'Toelichting <span class="opt">(maat, kleur, merk…)</span>';
+      document.getElementById("i_note").placeholder = c ? "Een weekend Thermen? Graag via Tikkie of op NL00 BANK 0123 4567 89 t.n.v. M. Smit" : "Maat L, liefst in het blauw";
+      document.getElementById("l_url").innerHTML = c ? 'Betaal- of donatielink <span class="opt">(Tikkie, actiepagina goed doel…)</span>' : 'Link naar winkel <span class="opt">(optioneel)</span>';
+      document.getElementById("f_price").classList.toggle("hidden", c);
+      document.getElementById("f_target").classList.toggle("hidden", !c);
+      const w = document.getElementById("kindWarn"); if (w) w.hidden = kindNow() === startKind;
+    };
+    dlgForm.querySelectorAll("input[name=i_kind]").forEach(r => r.onchange = applyKind);
+    applyKind();
     dlg.returnValue = ""; dlg.showModal(); setTimeout(() => document.getElementById("i_title").focus(), 50);
     dlg.onclose = async () => {
       const v = dlg.returnValue;
       try {
         if (v === "delete") {
           if (!confirm(`“${e.title}” verwijderen?`)) return;
-          await api.deleteItem(slug, token, e.id); toast("Cadeau verwijderd");
+          await api.deleteItem(slug, token, e.id); toast("Wens verwijderd");
         } else if (v === "ok") {
-          const price = document.getElementById("i_price").value;
+          const price = document.getElementById("i_price").value, target = document.getElementById("i_target").value, kind = kindNow();
           await api.upsertItem({
             p_slug: slug, p_token: token, p_item_id: e.id || null,
             p_title: document.getElementById("i_title").value.trim(),
             p_note: document.getElementById("i_note").value.trim() || null,
             p_url: document.getElementById("i_url").value.trim() || null,
-            p_price: price === "" ? null : Number(price),
-            p_priority: Number(document.getElementById("i_prio").value)
+            p_price: kind === "gift" && price !== "" ? Number(price) : null,
+            p_priority: Number(document.getElementById("i_prio").value),
+            p_kind: kind,
+            p_target_amount: kind === "contribution" && target !== "" ? Number(target) : null
           });
-          toast(it ? "Opgeslagen" : "Cadeau toegevoegd");
+          toast(it ? "Opgeslagen" : "Wens toegevoegd");
         } else return;
         await load();
       } catch (err) { toast(err.message); }
